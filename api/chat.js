@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  // Enable CORS - must be set before any other response
+  // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
@@ -22,6 +22,8 @@ export default async function handler(req, res) {
   try {
     const { model, max_tokens, messages } = req.body;
 
+    console.log('Request body:', req.body);
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -38,13 +40,16 @@ export default async function handler(req, res) {
 
     const data = await response.json();
     
+    console.log('Anthropic response:', data);
+    
     if (!response.ok) {
+      console.error('Anthropic API error:', data);
       return res.status(response.status).json(data);
     }
 
     return res.status(200).json(data);
   } catch (error) {
     console.error('Error:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message, stack: error.stack });
   }
 }
