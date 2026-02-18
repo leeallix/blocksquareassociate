@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FP&A Data Grid</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: auto;
+            max-width: 100%;
+        }
+        
+        .ai-summary-section {
+            padding: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            background: #f8f9fa;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .ai-button, .export-button, .chat-button, .export-ai-button {
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .ai-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .export-button {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            box-shadow: 0 2px 8px rgba(17, 153, 142, 0.3);
+        }
+        
+        .export-ai-button {
+            background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
+            box-shadow: 0 2px 8px rgba(252, 70, 107, 0.3);
+        }
+        
+        .chat-button {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            box-shadow: 0 2px 8px rgba(250, 112, 154, 0.3);
+        }
+        
+        .ai-button:hover, .export-button:hover, .chat-button:hover, .export-ai-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .ai-button:hover {
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .export-button:hover {
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
+        }
+        
+        .export-ai-button:hover {
+            box-shadow: 0 4px 12px rgba(252, 70, 107, 0.4);
+        }
+        
+        .chat-button:hover {
+            box-shadow: 0 4px 12px rgba(250, 112, 154, 0.4);
+        }
+        
+        .ai-button:active, .export-button:active, .chat-button:active, .export-ai-button:active {
+            transform: translateY(0);
+        }
+        
+        .ai-button:disabled, .export-button:disabled, .chat-button:disabled, .export-ai-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .chat-container {
+            display: none;
+            margin-top: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        
+        .chat-container.visible {
+            display: flex;
+            flex-direction: column;
+            height: 400px;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+            padding: 12px 16px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .chat-close:hover {
+            opacity: 0.8;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .chat-message {
+            padding: 10px 14px;
+            border-radius: 8px;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+        
+        .chat-message.user {
+            background: #e3f2fd;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        
+        .chat-message.assistant {
+            background: #f5f5f5;
+            align-self: flex-start;
+        }
+        
+        .chat-message.loading {
+            background: #f5f5f5;
+            color: #999;
+            font-style: italic;
+        }
+        
+        .chat-input-container {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            border-top: 1px solid #e0e0e0;
+            background: #fafafa;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        .chat-input:focus {
+            outline: none;
+            border-color: #fa709a;
+        }
+        
+        .chat-send {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .chat-send:hover {
+            transform: translateY(-1px);
+        }
+        
+        .chat-send:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .summary-output {
+            margin-top: 15px;
+            padding: 16px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            line-height: 1.6;
+            color: #2d3748;
+            display: none;
+        }
+        
+        .summary-output.visible {
+            display: block;
+        }
+        
+        .summary-output.loading {
+            color: #718096;
+            font-style: italic;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        th, td {
+            padding: 12px 16px;
+            text-align: right;
+            border: 1px solid #e0e0e0;
+        }
+        
+        th {
+            background: #2c3e50;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        th:first-child {
+            text-align: left;
+            background: #34495e;
+        }
+        
+        td:first-child {
+            text-align: left;
+            font-weight: 600;
+            background: #ecf0f1;
+            position: sticky;
+            left: 0;
+            z-index: 5;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .number {
+            font-family: 'Courier New', monospace;
+        }
+        
+        .comment {
+            text-align: left;
+            font-size: 13px;
+            color: #555;
+            max-width: 300px;
+            line-height: 1.4;
+            cursor: text;
+            padding: 12px 16px;
+            transition: background 0.2s;
+        }
+        
+        .comment:hover {
+            background: #f0f8ff;
+        }
+        
+        .comment:focus {
+            outline: 2px solid #3498db;
+            background: white;
+        }
+        
+        .continent-header td {
+            background: #3498db;
+            color: white;
+            font-weight: 700;
+            font-size: 15px;
+            text-align: left;
+            padding: 14px 16px;
+            letter-spacing: 0.5px;
+        }
+        
+        .continent-header:hover td {
+            background: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="ai-summary-section">
+            <div class="button-group">
+                <button class="ai-button" onclick="generateAISummary()">✨ Generate AI Summary</button>
+                <button class="export-button" onclick="exportToCSV()">📊 Export to CSV</button>
+                <button class="export-ai-button" onclick="exportWithAI()">🤖 Export with AI Recommendations</button>
+                <button class="chat-button" onclick="toggleChat()">💬 AI Chat</button>
+            </div>
+            <div class="summary-output" id="summaryOutput"></div>
+            
+            <div class="chat-container" id="chatContainer">
+                <div class="chat-header">
+                    <span>💬 Ask AI about your data</span>
+                    <button class="chat-close" onclick="toggleChat()">✕</button>
+                </div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-container">
+                    <input type="text" id="chatInput" class="chat-input" placeholder="Ask a question about the data..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+                    <button class="chat-send" onclick="sendChatMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Country</th>
+                    <th>OP1</th>
+                    <th>OP2</th>
+                    <th>Actuals</th>
+                    <th>Budget</th>
+                    <th>Forecast</th>
+                    <th>Variance</th>
+                    <th>Latest Estimate</th>
+                    <th>Comments</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="continent-header">
+                    <td colspan="9">North America</td>
+                </tr>
+                <tr>
+                    <td>US</td>
+                    <td class="number">8,234,567</td>
+                    <td class="number">8,789,123</td>
+                    <td class="number">8,923,456</td>
+                    <td class="number">8,500,000</td>
+                    <td class="number">9,145,678</td>
+                    <td class="number">423,456</td>
+                    <td class="number">9,456,789</td>
+                    <td class="comment" contenteditable="true">Beating budget by 5.0%. Regional expansion in Southeast contributing to upside. Forecast revised upward.</td>
+                </tr>
+                <tr>
+                    <td>CA</td>
+                    <td class="number">2,567,890</td>
+                    <td class="number">2,734,123</td>
+                    <td class="number">2,801,456</td>
+                    <td class="number">2,650,000</td>
+                    <td class="number">2,890,234</td>
+                    <td class="number">151,456</td>
+                    <td class="number">2,945,678</td>
+                    <td class="comment" contenteditable="true">Positive variance of 5.7%. New product launch exceeded expectations in Toronto and Vancouver markets.</td>
+                </tr>
+                <tr>
+                    <td>MX</td>
+                    <td class="number">1,456,789</td>
+                    <td class="number">1,578,234</td>
+                    <td class="number">1,623,890</td>
+                    <td class="number">1,500,000</td>
+                    <td class="number">1,712,345</td>
+                    <td class="number">123,890</td>
+                    <td class="number">1,789,456</td>
+                    <td class="comment" contenteditable="true">On track with 8.3% upside. Cross-border e-commerce channel exceeding expectations.</td>
+                </tr>
+                
+                <tr class="continent-header">
+                    <td colspan="9">Europe</td>
+                </tr>
+                <tr>
+                    <td>UK</td>
+                    <td class="number">3,123,789</td>
+                    <td class="number">3,345,678</td>
+                    <td class="number">3,412,901</td>
+                    <td class="number">3,250,000</td>
+                    <td class="number">3,534,567</td>
+                    <td class="number">162,901</td>
+                    <td class="number">3,612,345</td>
+                    <td class="comment" contenteditable="true">Above plan by 5.0%. Brexit headwinds offset by strong digital transformation initiatives.</td>
+                </tr>
+                <tr>
+                    <td>DE</td>
+                    <td class="number">3,456,123</td>
+                    <td class="number">3,678,901</td>
+                    <td class="number">3,712,345</td>
+                    <td class="number">3,500,000</td>
+                    <td class="number">3,845,678</td>
+                    <td class="number">212,345</td>
+                    <td class="number">3,923,456</td>
+                    <td class="comment" contenteditable="true">Outperforming budget by 6.1%. Enterprise sales segment showing consistent growth trajectory.</td>
+                </tr>
+                <tr>
+                    <td>FR</td>
+                    <td class="number">2,890,456</td>
+                    <td class="number">3,012,789</td>
+                    <td class="number">3,089,234</td>
+                    <td class="number">2,950,000</td>
+                    <td class="number">3,156,890</td>
+                    <td class="number">139,234</td>
+                    <td class="number">3,234,567</td>
+                    <td class="comment" contenteditable="true">Solid performance with 4.7% variance. Marketing campaigns driving increased customer acquisition.</td>
+                </tr>
+                
+                <tr class="continent-header">
+                    <td colspan="9">Asia Pacific</td>
+                </tr>
+                <tr>
+                    <td>AU</td>
+                    <td class="number">1,245,678</td>
+                    <td class="number">1,389,234</td>
+                    <td class="number">1,402,567</td>
+                    <td class="number">1,350,000</td>
+                    <td class="number">1,425,890</td>
+                    <td class="number">52,567</td>
+                    <td class="number">1,478,900</td>
+                    <td class="comment" contenteditable="true">Actuals exceeding budget by 3.9%. Strong Q4 performance driven by increased market share.</td>
+                </tr>
+                <tr>
+                    <td>JP</td>
+                    <td class="number">4,567,234</td>
+                    <td class="number">4,823,456</td>
+                    <td class="number">4,901,678</td>
+                    <td class="number">4,700,000</td>
+                    <td class="number">5,034,890</td>
+                    <td class="number">201,678</td>
+                    <td class="number">5,156,789</td>
+                    <td class="comment" contenteditable="true">Favorable variance of 4.3%. Partnership with local distributors accelerating revenue growth.</td>
+                </tr>
+                <tr>
+                    <td>IN</td>
+                    <td class="number">2,345,678</td>
+                    <td class="number">2,567,890</td>
+                    <td class="number">2,634,567</td>
+                    <td class="number">2,450,000</td>
+                    <td class="number">2,789,123</td>
+                    <td class="number">184,567</td>
+                    <td class="number">2,856,789</td>
+                    <td class="comment" contenteditable="true">Strong 7.5% beat vs budget. Tier 2 cities showing rapid adoption, recommend increased investment.</td>
+                </tr>
+                
+                <tr class="continent-header">
+                    <td colspan="9">South America</td>
+                </tr>
+                <tr>
+                    <td>BR</td>
+                    <td class="number">1,789,345</td>
+                    <td class="number">1,923,567</td>
+                    <td class="number">1,978,234</td>
+                    <td class="number">1,850,000</td>
+                    <td class="number">2,045,678</td>
+                    <td class="number">128,234</td>
+                    <td class="number">2,123,456</td>
+                    <td class="comment" contenteditable="true">Tracking 6.9% ahead of budget. Currency headwinds managed through pricing adjustments.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        let chatHistory = [];
+        
+        async function generateAISummary() {
+            const button = document.querySelector('.ai-button');
+            const output = document.getElementById('summaryOutput');
+            
+            // Disable button and show loading state
+            button.disabled = true;
+            button.textContent = '✨ Generating...';
+            output.className = 'summary-output visible loading';
+            output.textContent = 'Analyzing regional comments...';
+            
+            try {
+                // Collect all comments from the table
+                const comments = [];
+                const commentCells = document.querySelectorAll('.comment');
+                
+                commentCells.forEach((cell, index) => {
+                    const row = cell.closest('tr');
+                    const country = row.querySelector('td:first-child').textContent;
+                    const commentText = cell.textContent.trim();
+                    if (commentText) {
+                        comments.push(`${country}: ${commentText}`);
+                    }
+                });
+                
+                // Call Claude API
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 1000,
+                        messages: [{
+                            role: 'user',
+                            content: `You are an FP&A analyst. Review these regional performance comments and provide a concise executive summary (2-3 sentences) highlighting the key trends, patterns, and overall business performance across regions:
+
+${comments.join('\n')}
+
+Focus on: overall performance vs budget, geographic trends, and any notable insights.`
+                        }]
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Extract and display the summary
+                const summary = data.content[0].text;
+                output.className = 'summary-output visible';
+                output.innerHTML = `<strong>Executive Summary:</strong><br>${summary}`;
+                
+            } catch (error) {
+                output.className = 'summary-output visible';
+                output.innerHTML = `<strong>Error:</strong> Unable to generate summary. ${error.message}`;
+            } finally {
+                // Re-enable button
+                button.disabled = false;
+                button.textContent = '✨ Generate AI Summary';
+            }
+        }
+        
+        function exportToCSV() {
+            // Collect all data from the table
+            const rows = [];
+            
+            // Add headers
+            const headers = ['Country', 'OP1', 'OP2', 'Actuals', 'Budget', 'Forecast', 'Variance', 'Latest Estimate', 'Comments'];
+            rows.push(headers);
+            
+            // Get all data rows (skip continent headers)
+            const dataRows = document.querySelectorAll('tbody tr:not(.continent-header)');
+            dataRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const rowData = Array.from(cells).map(cell => {
+                    // Clean the text and escape commas
+                    let text = cell.textContent.trim();
+                    // If text contains comma, wrap in quotes
+                    if (text.includes(',')) {
+                        text = `"${text}"`;
+                    }
+                    return text;
+                });
+                rows.push(rowData);
+            });
+            
+            // Convert to CSV format
+            const csvContent = rows.map(row => row.join(',')).join('\n');
+            
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'fpna-data-export.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        }
+        
+        async function exportWithAI() {
+            const button = document.querySelector('.export-ai-button');
+            const originalText = button.textContent;
+            
+            // Disable button and show loading state
+            button.disabled = true;
+            button.textContent = '🤖 Generating recommendations...';
+            
+            try {
+                // Collect all data from the table
+                const tableData = [];
+                const dataRows = document.querySelectorAll('tbody tr:not(.continent-header)');
+                
+                dataRows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    tableData.push({
+                        country: cells[0].textContent.trim(),
+                        op1: cells[1].textContent.trim(),
+                        op2: cells[2].textContent.trim(),
+                        actuals: cells[3].textContent.trim(),
+                        budget: cells[4].textContent.trim(),
+                        forecast: cells[5].textContent.trim(),
+                        variance: cells[6].textContent.trim(),
+                        le: cells[7].textContent.trim(),
+                        comment: cells[8].textContent.trim()
+                    });
+                });
+                
+                // Call Claude API to generate recommendations
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 2000,
+                        messages: [{
+                            role: 'user',
+                            content: `You are an FP&A analyst. Review this regional performance data and provide specific, actionable recommendations for each region. For each country, provide:
+1. Risk Level (Low/Medium/High)
+2. One specific action item or recommendation (be concise, 1-2 sentences max)
+
+Data:
+${tableData.map(d => `${d.country}: Actuals=${d.actuals}, Budget=${d.budget}, Variance=${d.variance}, Comment="${d.comment}"`).join('\n')}
+
+Return your response in this exact format for each country:
+COUNTRY|RISK_LEVEL|RECOMMENDATION
+
+Example:
+US|Low|Continue momentum in Southeast expansion. Monitor for potential market saturation.
+CA|Medium|Investigate sustainability of product launch success. Consider replication in other markets.
+
+Provide recommendations for all countries in the data.`
+                        }]
+                    })
+                });
+                
+                const data = await response.json();
+                const aiResponse = data.content[0].text;
+                
+                // Parse AI recommendations
+                const recommendations = {};
+                const lines = aiResponse.trim().split('\n');
+                lines.forEach(line => {
+                    const parts = line.split('|');
+                    if (parts.length === 3) {
+                        const country = parts[0].trim();
+                        const risk = parts[1].trim();
+                        const rec = parts[2].trim();
+                        recommendations[country] = { risk, recommendation: rec };
+                    }
+                });
+                
+                // Build CSV with recommendations
+                const rows = [];
+                
+                // Add executive summary header
+                rows.push(['AI-GENERATED EXPORT WITH RECOMMENDATIONS']);
+                rows.push(['Generated on', new Date().toLocaleString()]);
+                rows.push([]);
+                
+                // Add headers
+                const headers = ['Country', 'OP1', 'OP2', 'Actuals', 'Budget', 'Forecast', 'Variance', 'Latest Estimate', 'Comments', 'Risk Level', 'AI Recommendation'];
+                rows.push(headers);
+                
+                // Add data with AI recommendations
+                tableData.forEach(d => {
+                    const rec = recommendations[d.country] || { risk: 'N/A', recommendation: 'No recommendation available' };
+                    const rowData = [
+                        d.country,
+                        d.op1,
+                        d.op2,
+                        d.actuals,
+                        d.budget,
+                        d.forecast,
+                        d.variance,
+                        d.le,
+                        `"${d.comment}"`,
+                        rec.risk,
+                        `"${rec.recommendation}"`
+                    ];
+                    rows.push(rowData);
+                });
+                
+                // Convert to CSV format
+                const csvContent = rows.map(row => row.join(',')).join('\n');
+                
+                // Create download link
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'fpna-data-with-ai-recommendations.csv';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+            } catch (error) {
+                alert(`Error generating AI recommendations: ${error.message}`);
+            } finally {
+                // Re-enable button
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+        
+        function toggleChat() {
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.classList.toggle('visible');
+            
+            // Focus input when opening
+            if (chatContainer.classList.contains('visible')) {
+                document.getElementById('chatInput').focus();
+            }
+        }
+        
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Clear input
+            input.value = '';
+            
+            // Add user message to chat
+            const messagesDiv = document.getElementById('chatMessages');
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'chat-message user';
+            userMessageDiv.textContent = message;
+            messagesDiv.appendChild(userMessageDiv);
+            
+            // Add loading message
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'chat-message loading';
+            loadingDiv.textContent = 'AI is thinking...';
+            messagesDiv.appendChild(loadingDiv);
+            
+            // Scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            // Disable send button
+            const sendButton = document.querySelector('.chat-send');
+            sendButton.disabled = true;
+            
+            try {
+                // Collect current data from table
+                const tableData = [];
+                const dataRows = document.querySelectorAll('tbody tr:not(.continent-header)');
+                dataRows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    const country = cells[0].textContent.trim();
+                    const op1 = cells[1].textContent.trim();
+                    const op2 = cells[2].textContent.trim();
+                    const actuals = cells[3].textContent.trim();
+                    const budget = cells[4].textContent.trim();
+                    const forecast = cells[5].textContent.trim();
+                    const variance = cells[6].textContent.trim();
+                    const le = cells[7].textContent.trim();
+                    const comment = cells[8].textContent.trim();
+                    
+                    tableData.push(`${country}: OP1=${op1}, OP2=${op2}, Actuals=${actuals}, Budget=${budget}, Forecast=${forecast}, Variance=${variance}, LE=${le}, Comment="${comment}"`);
+                });
+                
+                // Add message to history
+                chatHistory.push({
+                    role: 'user',
+                    content: message
+                });
+                
+                // Build messages array with context
+                const messages = [
+                    {
+                        role: 'user',
+                        content: `You are an FP&A analyst assistant. Here is the current regional performance data:
+
+${tableData.join('\n')}
+
+Answer questions about this data. Be concise and specific. Use the actual numbers when relevant.`
+                    },
+                    ...chatHistory
+                ];
+                
+                // Call Claude API
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 500,
+                        messages: messages
+                    })
+                });
+                
+                const data = await response.json();
+                const aiResponse = data.content[0].text;
+                
+                // Add to history
+                chatHistory.push({
+                    role: 'assistant',
+                    content: aiResponse
+                });
+                
+                // Remove loading message
+                messagesDiv.removeChild(loadingDiv);
+                
+                // Add AI response
+                const aiMessageDiv = document.createElement('div');
+                aiMessageDiv.className = 'chat-message assistant';
+                aiMessageDiv.textContent = aiResponse;
+                messagesDiv.appendChild(aiMessageDiv);
+                
+            } catch (error) {
+                // Remove loading message
+                messagesDiv.removeChild(loadingDiv);
+                
+                // Add error message
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'chat-message assistant';
+                errorDiv.textContent = `Sorry, I encountered an error: ${error.message}`;
+                messagesDiv.appendChild(errorDiv);
+            } finally {
+                // Re-enable send button
+                sendButton.disabled = false;
+                
+                // Scroll to bottom
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                
+                // Focus input
+                input.focus();
+            }
+        }
+    </script>
+</body>
+</html>
